@@ -24,7 +24,7 @@ refs.loadMoreBtn.addEventListener('click', handleLoadMore)
 const lightbox = new SimpleLightbox('.gallery a', { captionDelay: 250, captionPosition: 'bottom', captionsData: "alt" });
 
 // переробити функція прибравши then, catch, поставити try catch в середину яких буде поміщено конструкцію async await
-function handleSubmitForm(evt) {
+async function handleSubmitForm(evt) {
     evt.preventDefault()
     refs.gallery.innerHTML = '';
     params.page = 1
@@ -33,47 +33,69 @@ function handleSubmitForm(evt) {
         return createAlertMessages("Warning", emptyInput)
     }
     refs.loader.classList.remove('visually-hidden')
-    fetchImages(params)
-        .then(({ total, totalHits, hits }) => {
-            params.maxPage = Math.ceil(totalHits / params.per_page)
-            refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
-            lightbox.refresh()
-            buttonService.show(refs.loadMoreBtn)
-            buttonService.disabled(refs.loadMoreBtn)
-            if (hits.length > 0 && hits.length * params.page !== totalHits) {
-                buttonService.enable(refs.loadMoreBtn)
-            }
-            else {
-                createAlertMessages('Warning', emptySearchQuery)
-                buttonService.hide(refs.loadMoreBtn)
-            }
-        })
-        .catch(error => createAlertMessages('Error', errorFetch, error))
-        .finally(() => {
-            refs.loader.classList.add('visually-hidden')
-            refs.form.reset()
-        })
+    try {
+        const response = await fetchImages(params);
+        params.maxPage = Math.ceil(response.totalHits / params.per_page)
+        refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(response.hits))
+        lightbox.refresh()
+        buttonService.show(refs.loadMoreBtn)
+        buttonService.disabled(refs.loadMoreBtn)
+        if (response.hits.length > 0 && response.hits.length * params.page !== response.totalHits) {
+            buttonService.enable(refs.loadMoreBtn)
+        }
+        else {
+            createAlertMessages('Warning', emptySearchQuery)
+            buttonService.hide(refs.loadMoreBtn)
+        }
+    }
+    catch (error) {
+        createAlertMessages('Error', errorFetch, error)
+        console.log(error);
+    }
+    finally {
+        refs.loader.classList.add('visually-hidden')
+        refs.form.reset()
+    }
 }
 
-function handleLoadMore() {
+async function handleLoadMore() {
     params.page += 1
     const loaderMore = refs.loadMoreBtn.nextElementSibling
     loaderMore.classList.remove('visually-hidden')
-    fetchImages(params)
-        .then(({ hits }) => {
-            refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
-            scrollGallery()
-        })
-        .catch(error => createAlertMessages('Error', errorFetch, error))
-        .finally(() => {
-            buttonService.enable(refs.loadMoreBtn)
-            loaderMore.classList.add('visually-hidden')
-            if (params.page === params.maxPage) {
-                buttonService.hide(refs.loadMoreBtn);
-                refs.loadMoreBtn.removeAttribute('click', handleLoadMore)
-                createAlertMessages("Error", "We're sorry, but you've reached the end of search results.")
-            }
-        })
+    try {
+        const response = await fetchImages(params);
+        refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(response.hits))
+        lightbox.refresh()
+        scrollGallery()
+    }
+    catch (error) {
+        createAlertMessages('Error', errorFetch, error)
+        // console.log(error);
+    }
+    finally {
+        buttonService.enable(refs.loadMoreBtn)
+        loaderMore.classList.add('visually-hidden')
+        if (params.page === params.maxPage) {
+            buttonService.hide(refs.loadMoreBtn);
+            refs.loadMoreBtn.removeAttribute('click', handleLoadMore)
+            createAlertMessages("Error", "We're sorry, but you've reached the end of search results.")
+        }
+    }
+    // fetchImages(params)
+    //     .then(({ hits }) => {
+    //         refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
+    //         scrollGallery()
+    //     })
+    //     .catch(error => createAlertMessages('Error', errorFetch, error))
+    //     .finally(() => {
+    //         buttonService.enable(refs.loadMoreBtn)
+    //         loaderMore.classList.add('visually-hidden')
+    //         if (params.page === params.maxPage) {
+    //             buttonService.hide(refs.loadMoreBtn);
+    //             refs.loadMoreBtn.removeAttribute('click', handleLoadMore)
+    //             createAlertMessages("Error", "We're sorry, but you've reached the end of search results.")
+    //         }
+    //     })
 }
 
 function createAlertMessages(typeMessage, alertMessage, typeError = null) {
@@ -85,7 +107,6 @@ function createAlertMessages(typeMessage, alertMessage, typeError = null) {
 
 function scrollGallery() {
     const cardHight = refs.gallery.lastElementChild.getBoundingClientRect().height
-
     window.scrollBy({
         top: cardHight * 2,
         behavior: 'smooth'
