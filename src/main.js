@@ -10,7 +10,6 @@ import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import buttonService from './js/loadMoreService'
 import refs from "./js/refs"; './js/refs'
-const { gallery, form, loader, loadMoreBtn } = refs;
 
 const params = {
     q: '',
@@ -18,67 +17,60 @@ const params = {
     per_page: 15,
     maxPage: 0
 }
-buttonService.hide(loadMoreBtn)
+buttonService.hide(refs.loadMoreBtn)
 
-form.addEventListener('submit', handleSubmitForm)
-gallery.addEventListener('click', handleClick)
+refs.form.addEventListener('submit', handleSubmitForm)
+refs.loadMoreBtn.addEventListener('click', handleLoadMore)
+const lightbox = new SimpleLightbox('.gallery a', { captionDelay: 250, captionPosition: 'bottom', captionsData: "alt" });
 
-function handleClick(evt) {
-    evt.preventDefault()
-    if (evt.target.nodeName !== "IMG") {
-        return
-    }
-    new SimpleLightbox('.gallery a', { captionDelay: 250, captionPosition: 'bottom', captionsData: "alt" });
-
-}
-
+// переробити функція прибравши then, catch, поставити try catch в середину яких буде поміщено конструкцію async await
 function handleSubmitForm(evt) {
     evt.preventDefault()
-    gallery.innerHTML = '';
+    refs.gallery.innerHTML = '';
     params.page = 1
     params.q = evt.currentTarget.children.query.value
     if (!params.q.trim().length) {
         return createAlertMessages("Warning", emptyInput)
     }
-    loader.classList.remove('visually-hidden')
+    refs.loader.classList.remove('visually-hidden')
     fetchImages(params)
         .then(({ total, totalHits, hits }) => {
             params.maxPage = Math.ceil(totalHits / params.per_page)
-            gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
-            buttonService.show(loadMoreBtn)
-            buttonService.disabled(loadMoreBtn)
+            refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
+            lightbox.refresh()
+            buttonService.show(refs.loadMoreBtn)
+            buttonService.disabled(refs.loadMoreBtn)
             if (hits.length > 0 && hits.length * params.page !== totalHits) {
-                buttonService.enable(loadMoreBtn)
-                loadMoreBtn.addEventListener('click', handleLoadMore)
+                buttonService.enable(refs.loadMoreBtn)
             }
             else {
                 createAlertMessages('Warning', emptySearchQuery)
-                buttonService.hide(loadMoreBtn)
+                buttonService.hide(refs.loadMoreBtn)
             }
         })
         .catch(error => createAlertMessages('Error', errorFetch, error))
         .finally(() => {
-            loader.classList.add('visually-hidden')
-            form.reset()
+            refs.loader.classList.add('visually-hidden')
+            refs.form.reset()
         })
 }
 
 function handleLoadMore() {
     params.page += 1
-    scrollGallery()
-    const loaderMore = loadMoreBtn.nextElementSibling
+    const loaderMore = refs.loadMoreBtn.nextElementSibling
     loaderMore.classList.remove('visually-hidden')
     fetchImages(params)
         .then(({ hits }) => {
-            gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
+            refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
+            scrollGallery()
         })
         .catch(error => createAlertMessages('Error', errorFetch, error))
         .finally(() => {
-            buttonService.enable(loadMoreBtn)
+            buttonService.enable(refs.loadMoreBtn)
             loaderMore.classList.add('visually-hidden')
             if (params.page === params.maxPage) {
-                buttonService.hide(loadMoreBtn);
-                loadMoreBtn.removeAttribute('click', handleLoadMore)
+                buttonService.hide(refs.loadMoreBtn);
+                refs.loadMoreBtn.removeAttribute('click', handleLoadMore)
                 createAlertMessages("Error", "We're sorry, but you've reached the end of search results.")
             }
         })
@@ -92,13 +84,10 @@ function createAlertMessages(typeMessage, alertMessage, typeError = null) {
 }
 
 function scrollGallery() {
-    const targetElement = gallery.lastElementChild;
-
-    const rect = targetElement.getBoundingClientRect();
-    const galleryRect = gallery.getBoundingClientRect();
+    const cardHight = refs.gallery.lastElementChild.getBoundingClientRect().height
 
     window.scrollBy({
-        top: rect.top - galleryRect.top + window.scrollY,
+        top: cardHight * 2,
         behavior: 'smooth'
     });
 }
