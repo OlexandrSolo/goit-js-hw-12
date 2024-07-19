@@ -1,5 +1,5 @@
 const emptyInput = 'Sorry, please enter text';
-const emptySearchQuery = 'Sorry, there are not no images matching your search query';
+const emptySearchQuery = 'Sorry, are no images matching your search query';
 const errorFetch = 'Oops'
 
 import fetchImages from "./js/pixabay-api"
@@ -23,7 +23,6 @@ refs.form.addEventListener('submit', handleSubmitForm)
 refs.loadMoreBtn.addEventListener('click', handleLoadMore)
 const lightbox = new SimpleLightbox('.gallery a', { captionDelay: 250, captionPosition: 'bottom', captionsData: "alt" });
 
-// переробити функція прибравши then, catch, поставити try catch в середину яких буде поміщено конструкцію async await
 async function handleSubmitForm(evt) {
     evt.preventDefault()
     refs.gallery.innerHTML = '';
@@ -44,12 +43,12 @@ async function handleSubmitForm(evt) {
             buttonService.enable(refs.loadMoreBtn)
         }
         else {
-            createAlertMessages('Warning', emptySearchQuery)
+            createAlertMessages('warning', emptySearchQuery)
             buttonService.hide(refs.loadMoreBtn)
         }
     }
     catch (error) {
-        createAlertMessages('Error', errorFetch, error)
+        createAlertMessages('error', errorFetch, error)
         console.log(error);
     }
     finally {
@@ -69,37 +68,22 @@ async function handleLoadMore() {
         scrollGallery()
     }
     catch (error) {
-        createAlertMessages('Error', errorFetch, error)
-        // console.log(error);
+        // const nameMethod = 'Error'
+        createAlertMessages('error', errorFetch, error)
     }
     finally {
         buttonService.enable(refs.loadMoreBtn)
         loaderMore.classList.add('visually-hidden')
         if (params.page === params.maxPage) {
             buttonService.hide(refs.loadMoreBtn);
-            refs.loadMoreBtn.removeAttribute('click', handleLoadMore)
+            refs.loadMoreBtn.removeEventListener('click', handleLoadMore)
             createAlertMessages("Error", "We're sorry, but you've reached the end of search results.")
         }
     }
-    // fetchImages(params)
-    //     .then(({ hits }) => {
-    //         refs.gallery.insertAdjacentHTML('beforeend', renderMarkup(hits))
-    //         scrollGallery()
-    //     })
-    //     .catch(error => createAlertMessages('Error', errorFetch, error))
-    //     .finally(() => {
-    //         buttonService.enable(refs.loadMoreBtn)
-    //         loaderMore.classList.add('visually-hidden')
-    //         if (params.page === params.maxPage) {
-    //             buttonService.hide(refs.loadMoreBtn);
-    //             refs.loadMoreBtn.removeAttribute('click', handleLoadMore)
-    //             createAlertMessages("Error", "We're sorry, but you've reached the end of search results.")
-    //         }
-    //     })
 }
 
 function createAlertMessages(typeMessage, alertMessage, typeError = null) {
-    return iziToast.warning({
+    return iziToast[typeMessage]({
         title: `${typeMessage}`,
         message: typeError ? `${alertMessage} ${typeError} ` : `${alertMessage}`,
     })
